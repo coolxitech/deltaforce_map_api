@@ -10,7 +10,7 @@ export interface ProbeResult {
   version: string | null;
   httpMatched: boolean;
   websocketMatched: boolean;
-  websocketData: any | null;
+  websocketData: unknown;
   error: string | null;
   checkedAt: string;
 }

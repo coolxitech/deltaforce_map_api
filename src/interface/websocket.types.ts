@@ -25,18 +25,24 @@ export function isRayRawData(data: unknown): data is RawData {
     return false;
   }
 
-  const rawData = data as any;
+  const d = data as Record<string, unknown>;
 
   // 只要包含核心数据字段之一（a:机器人, b:盒子, i:物资, p:玩家），或者包含地图信息m
   return (
-    typeof rawData.m === 'number' ||
-    Array.isArray(rawData.a) ||
-    Array.isArray(rawData.b) ||
-    Array.isArray(rawData.i) ||
-    Array.isArray(rawData.p) ||
-    (rawData.a && (rawData.a.u || rawData.a.d)) ||
-    (rawData.b && (rawData.b.u || rawData.b.d)) ||
-    (rawData.i && (rawData.i.u || rawData.i.d)) ||
-    (rawData.p && (rawData.p.u || rawData.p.d))
+    typeof d['m'] === 'number' ||
+    Array.isArray(d['a']) ||
+    Array.isArray(d['b']) ||
+    Array.isArray(d['i']) ||
+    Array.isArray(d['p']) ||
+    (!!d['a'] &&
+      typeof d['a'] === 'object' &&
+      ('u' in d['a'] || 'd' in d['a'])) ||
+    (!!d['b'] &&
+      typeof d['b'] === 'object' &&
+      ('u' in d['b'] || 'd' in d['b'])) ||
+    (!!d['i'] &&
+      typeof d['i'] === 'object' &&
+      ('u' in d['i'] || 'd' in d['i'])) ||
+    (!!d['p'] && typeof d['p'] === 'object' && ('u' in d['p'] || 'd' in d['p']))
   );
 }

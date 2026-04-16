@@ -12,7 +12,7 @@ export interface ScannerContext {
     url: URL,
     predicate: (data: unknown) => boolean,
     timeoutMs: number,
-  ): Promise<any | null>;
+  ): Promise<unknown>;
 }
 
 export interface ScannerProbeResult {
@@ -21,7 +21,7 @@ export interface ScannerProbeResult {
   version: string;
   httpMatched: boolean;
   websocketMatched: boolean;
-  websocketData: any | null;
+  websocketData: unknown;
 }
 
 export interface ServerScanner {
@@ -54,10 +54,9 @@ export class ServerScannerRegistry {
 
 class RayServerScanner implements ServerScanner {
   readonly version = 'ray';
-  private readonly httpPath = normalizePath(process.env.RAY_HTTP_PATH ?? '/');
-  private readonly websocketPath = normalizePath(
-    process.env.RAY_WEBSOCKET_PATH ?? '/web',
-  );
+  private readonly httpPath = normalizePath('/');
+  private readonly websocketPath = normalizePath('/web');
+  private readonly websocketTimeoutMs = 7000;
 
   async scan(
     server: DfServer,
@@ -66,7 +65,9 @@ class RayServerScanner implements ServerScanner {
     const httpResponse = await context.httpGet(this.resolveHttpUrl(server));
 
     if (httpResponse.statusCode !== 200) {
-      throw new Error(`ray HTTP probe returned non-200 status: ${httpResponse.statusCode}`);
+      throw new Error(
+        `ray HTTP probe returned non-200 status: ${httpResponse.statusCode}`,
+      );
     }
 
     const httpMatched = isRayHtml(httpResponse.body);
@@ -76,16 +77,21 @@ class RayServerScanner implements ServerScanner {
     }
 
     let websocketMatched = false;
-    let websocketData: any = null;
+    let websocketData: unknown = null;
     try {
       websocketData = await context.waitForWebSocketJson(
         this.resolveWebSocketUrl(server),
         websocketConnectedMessageGuards.ray,
-        Number(process.env.RAY_WEBSOCKET_TIMEOUT_MS ?? 7000),
+        this.websocketTimeoutMs,
       );
       websocketMatched = websocketData !== null;
-    } catch (err: any) {
-      if (err?.statusCode === 401) {
+    } catch (err: unknown) {
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'statusCode' in err &&
+        (err as { statusCode: unknown }).statusCode === 401
+      ) {
         // Retry with password query parameter
         try {
           const urlWithPassword = this.resolveWebSocketUrl(server);
@@ -93,7 +99,7 @@ class RayServerScanner implements ServerScanner {
           websocketData = await context.waitForWebSocketJson(
             urlWithPassword,
             websocketConnectedMessageGuards.ray,
-            Number(process.env.RAY_WEBSOCKET_TIMEOUT_MS ?? 7000),
+            this.websocketTimeoutMs,
           );
           websocketMatched = websocketData !== null;
         } catch {

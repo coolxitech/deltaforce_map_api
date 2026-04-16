@@ -49,12 +49,14 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async listServers(): Promise<(DfServer & { detail?: any })[]> {
+  async listServers(): Promise<(DfServer & { detail?: unknown })[]> {
     const servers = await this.database.adapter.listServers();
-    
+
     return Promise.all(
       servers.map(async (server) => {
-        const detail = await this.redis.get<any>(`server:${server.id}:probe`);
+        const detail = await this.redis.get<unknown>(
+          `server:${server.id}:probe`,
+        );
         return {
           ...server,
           detail: detail || null,
@@ -63,14 +65,14 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  async getServer(id: number): Promise<DfServer & { detail?: any }> {
+  async getServer(id: number): Promise<DfServer & { detail?: unknown }> {
     const server = await this.database.adapter.getServer(id);
 
     if (!server) {
       throw new NotFoundException(`Server ${id} not found`);
     }
 
-    const detail = await this.redis.get<any>(`server:${id}:probe`);
+    const detail = await this.redis.get<unknown>(`server:${id}:probe`);
     return {
       ...server,
       detail: detail || null,
@@ -102,8 +104,8 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
     return this.probeServer(server);
   }
 
-  async getProbeResult(id: number): Promise<any> {
-    const cached = await this.redis.get<any>(`server:${id}:probe`);
+  async getProbeResult(id: number): Promise<unknown> {
+    const cached = await this.redis.get<unknown>(`server:${id}:probe`);
 
     if (!cached) {
       throw new NotFoundException(`Cache data for server ${id} not found`);
@@ -125,11 +127,14 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
       });
 
       const alive = scan.websocketMatched ? 1 : 0;
-      
-      let displayData = scan.websocketData;
+
+      let displayData: unknown = scan.websocketData;
       if (scan.websocketData && server.version === 'ray') {
         try {
-          displayData = convertRayData(scan.websocketData);
+          const converted = convertRayData(
+            scan.websocketData as import('../interface/ray').RawData,
+          );
+          displayData = converted;
         } catch {
           // If conversion fails, keep raw data
         }
@@ -236,7 +241,7 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
     url: URL,
     predicate: (data: unknown) => boolean,
     timeoutMs: number,
-  ): Promise<any | null> {
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       let completed = false;
       const websocket = new WebSocket(url, {
@@ -245,11 +250,13 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
         },
       });
       const timeout = setTimeout(() => {
-        console.log(`[WS Debug] Timeout reached after ${timeoutMs}ms without matching data`);
+        console.log(
+          `[WS Debug] Timeout reached after ${timeoutMs}ms without matching data`,
+        );
         finish(null);
       }, timeoutMs);
 
-      const finish = (matchedData: any | null) => {
+      const finish = (matchedData: unknown) => {
         if (completed) {
           return;
         }
@@ -272,13 +279,17 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
       });
       websocket.once('unexpectedResponse', (_req, res) => {
         if (completed) return;
-        const statusCode = res.statusCode ?? 0;
+        const incomingMessage = res as import('node:http').IncomingMessage;
+        const statusCode: number = incomingMessage.statusCode ?? 0;
         console.log(`[WS Debug] Unexpected response ${statusCode} from ${url}`);
         completed = true;
         clearTimeout(timeout);
-        const err: any = new Error(`WebSocket unexpected response: ${statusCode}`);
-        err.statusCode = statusCode;
-        reject(err);
+        class WsUnexpectedResponseError extends Error {
+          constructor(public readonly statusCode: number) {
+            super(`WebSocket unexpected response: ${statusCode}`);
+          }
+        }
+        reject(new WsUnexpectedResponseError(statusCode));
       });
       websocket.once('upgrade', () => {
         console.log(`[WS Debug] WebSocket upgraded successfully to ${url}`);
@@ -287,7 +298,7 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
         if (completed) return;
 
         try {
-          let parsed: any = null;
+          let parsed: unknown = null;
           let messageType = 'text';
 
           if (Buffer.isBuffer(data)) {
@@ -299,7 +310,9 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
             } catch {
               try {
                 decompressed = gunzipSync(data);
-                console.log(`[WS Debug] Successfully decompressed gzip message`);
+                console.log(
+                  `[WS Debug] Successfully decompressed gzip message`,
+                );
               } catch {
                 decompressed = null;
               }
@@ -307,26 +320,32 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
 
             const targetBuffer = decompressed || data;
             const wasCompressed = !!decompressed;
-            
+
             // 2. Try JSON parse
             try {
               const text = targetBuffer.toString('utf8');
-              parsed = JSON.parse(text);
+              parsed = JSON.parse(text) as unknown;
               messageType = wasCompressed ? 'compressed-json' : 'json';
             } catch {
               // 3. Try MsgPack decode
               try {
                 parsed = msg_decode(targetBuffer);
                 messageType = wasCompressed ? 'compressed-msgpack' : 'msgpack';
-                console.log(`[WS Debug] Successfully decoded msgpack message from ${wasCompressed ? 'decompressed buffer' : 'original buffer'}`);
+                console.log(
+                  `[WS Debug] Successfully decoded msgpack message from ${wasCompressed ? 'decompressed buffer' : 'original buffer'}`,
+                );
               } catch {
-                console.log(`[WS Debug] Failed to parse Buffer as JSON or MsgPack`);
+                console.log(
+                  `[WS Debug] Failed to parse Buffer as JSON or MsgPack`,
+                );
               }
             }
           } else {
             // String data
             try {
-              parsed = JSON.parse(data.toString());
+              parsed = JSON.parse(
+                Buffer.from(data as unknown as ArrayBuffer).toString('utf8'),
+              ) as unknown;
               messageType = 'json';
             } catch {
               console.log(`[WS Debug] Failed to parse string as JSON`);
@@ -334,22 +353,34 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
           }
 
           if (parsed) {
-            const summary = typeof parsed === 'object' && parsed !== null 
-              ? JSON.stringify(parsed).substring(0, 100) 
-              : String(parsed);
-            
+            const summary =
+              typeof parsed === 'object'
+                ? JSON.stringify(parsed).substring(0, 100)
+                : JSON.stringify(parsed);
+
             const isMatch = predicate(parsed);
-            console.log(`[WS Debug] Received ${messageType} message: ${summary}...`);
+            console.log(
+              `[WS Debug] Received ${messageType} message: ${summary}...`,
+            );
 
             if (isMatch) {
-              console.log(`[WS Debug] Predicate matched (found m+seq)! Data captured and completed.`);
+              console.log(
+                `[WS Debug] Predicate matched (found m+seq)! Data captured and completed.`,
+              );
               finish(parsed);
             } else {
-              console.log(`[WS Debug] Ignoring non-core message (type: ${parsed.type || 'unknown'}). Still waiting for the compressed game data...`);
+              const parsedType =
+                typeof parsed === 'object' && 'type' in parsed
+                  ? String((parsed as Record<string, unknown>).type)
+                  : 'unknown';
+              console.log(
+                `[WS Debug] Ignoring non-core message (type: ${parsedType}). Still waiting for the compressed game data...`,
+              );
             }
           }
         } catch (e) {
-          console.log(`[WS Debug] Failed to process message: ${e.message}`);
+          const msg = e instanceof Error ? e.message : String(e);
+          console.log(`[WS Debug] Failed to process message: ${msg}`);
         }
       });
       websocket.once('close', () => {

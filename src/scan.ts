@@ -118,8 +118,10 @@ function printResults(results: ProbeResult[], json: boolean) {
     const latency = result.latencyMs === null ? '-' : `${result.latencyMs}ms`;
     const statusCode = result.statusCode === null ? '-' : result.statusCode;
     const error = result.error ? ` error="${result.error}"` : '';
-    
-    const wsData = result.websocketData ? ` wsData=${JSON.stringify(result.websocketData)}` : '';
+
+    const wsData = result.websocketData
+      ? ` wsData=${JSON.stringify(result.websocketData)}`
+      : '';
 
     console.log(
       `[${status}] id=${result.id} address=${result.address} scanMode=${result.scanMode} latency=${latency} statusCode=${statusCode}${wsData}${error}`,

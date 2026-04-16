@@ -224,7 +224,10 @@ export class RayDataConverter {
         return;
       }
 
-      const existingEntry = findPlayerEntryByName(state, sanitizeString(player.n));
+      const existingEntry = findPlayerEntryByName(
+        state,
+        sanitizeString(player.n),
+      );
 
       if (!existingEntry) {
         return;
