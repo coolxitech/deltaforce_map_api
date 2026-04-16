@@ -607,6 +607,10 @@ PROBE_INTERVAL_MS=60000  # 每 60 秒探测一次
 
 如有问题或建议，请提交 Issue 或通过以下方式联系。
 
+QQ群：[酷曦科技](https://qm.qq.com/q/NVuKWIUKsY)
+
+Telegram群：[酷曦科技](https://t.me/coolxitech)
+
 ---
 
 **注意**：本项目仅供学习和研究使用，请遵守相关法律法规和游戏用户协议。
