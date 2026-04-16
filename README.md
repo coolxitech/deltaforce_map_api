@@ -179,11 +179,6 @@ PORT=3000
 # 探测超时设置（毫秒）
 PROBE_TIMEOUT_MS=5000
 
-# Ray 版本配置
-RAY_HTTP_PATH=/                    # HTTP 探测路径
-RAY_WEBSOCKET_PATH=/web            # WebSocket 路径
-RAY_WEBSOCKET_TIMEOUT_MS=7000      # WebSocket 超时时间
-
 # 自动探测间隔（0 表示禁用，单位：毫秒）
 PROBE_INTERVAL_MS=0
 
