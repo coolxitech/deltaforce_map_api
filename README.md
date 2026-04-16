@@ -222,7 +222,7 @@ GET /servers
   "data": [
     {
       "id": 1,
-      "address": "http://example.com:8080",
+      "address": "example.com:8080",
       "version": "ray",
       "token": null,
       "alive": 1,
