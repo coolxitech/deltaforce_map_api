@@ -251,7 +251,7 @@ Authorization: Bearer YOUR_APP_KEY
 Content-Type: application/json
 
 {
-  "address": "http://game-server.example.com:8080",
+  "address": "game-server.example.com:8080",
   "version": "ray",
   "token": "optional-token"
 }
