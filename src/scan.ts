@@ -133,13 +133,13 @@ function summarize(results: ProbeResult[]): ScanSummary {
   return {
     total: results.length,
     alive: results.filter((result) => result.alive === 1).length,
-    failed: results.filter((result) => result.alive === -1).length,
+    failed: results.filter((result) => result.alive !== 1).length,
   };
 }
 
 function printHelp() {
   console.log(`Usage:
-  pnpm run scan                 Scan all servers with alive != -1
+  pnpm run scan                 Scan all servers with alive >= 0
   pnpm run scan -- --id 12      Scan one server
   pnpm run scan -- 12           Scan one server
   pnpm run scan -- --json       Print JSON output

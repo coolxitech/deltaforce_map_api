@@ -32,16 +32,6 @@ export class ProbesController {
     return this.probesService.createServer(body, authorization);
   }
 
-  @Post('server-probes')
-  probeAll() {
-    return this.probesService.probeAll();
-  }
-
-  @Post('servers/:id/probes')
-  probeOne(@Param('id', ParseIntPipe) id: number) {
-    return this.probesService.probeOne(id);
-  }
-
   @Get('servers/:id/probe')
   getProbeResult(@Param('id', ParseIntPipe) id: number) {
     return this.probesService.getProbeResult(id);

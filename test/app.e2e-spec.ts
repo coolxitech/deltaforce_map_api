@@ -4,34 +4,25 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { configureApp } from '../src/configure-app';
+import { DatabaseService } from '../src/database/database.service';
+import { RedisService } from '../src/database/redis/redis.service';
 
-describe('AppController (e2e)', () => {
+describe('App (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(DatabaseService)
+      .useValue({ adapter: {} })
+      .overrideProvider(RedisService)
+      .useValue({})
+      .compile();
 
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-  });
-
-  it('/health (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/health')
-      .expect(200)
-      .expect(({ body }) => {
-        expect(body).toMatchObject({
-          code: 0,
-          msg: 'success',
-          data: {
-            status: 'ok',
-            service: 'deltaforce_cheat_api',
-          },
-        });
-      });
   });
 
   it('/missing-route (GET) should wrap errors', () => {
@@ -45,6 +36,11 @@ describe('AppController (e2e)', () => {
           data: null,
         });
       });
+  });
+
+  it('does not expose HTTP probe triggers', async () => {
+    await request(app.getHttpServer()).post('/server-probes').expect(404);
+    await request(app.getHttpServer()).post('/servers/1/probes').expect(404);
   });
 
   afterEach(async () => {

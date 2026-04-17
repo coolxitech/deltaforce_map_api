@@ -150,9 +150,6 @@ pnpm run start:dev
 ### 验证安装
 
 ```bash
-# 健康检查
-curl http://localhost:3000/health
-
 # 扫描所有服务器
 pnpm run scan
 ```
@@ -190,22 +187,6 @@ REDIS_DB=0
 ```
 
 ## 📖 API 文档
-
-### 基础端点
-
-#### 健康检查
-```http
-GET /health
-```
-
-**响应示例：**
-```json
-{
-  "code": 0,
-  "msg": "success",
-  "data": {"status": "ok"}
-}
-```
 
 ### 服务器管理
 
@@ -266,19 +247,7 @@ Content-Type: application/json
 
 ### 探测功能
 
-#### 探测所有服务器
-```http
-POST /server-probes
-```
-
-立即对所有活跃服务器执行探测，更新数据库状态和 Redis 缓存。
-
-#### 探测单个服务器
-```http
-POST /servers/:id/probes
-```
-
-对指定服务器执行单次探测。
+探测仅通过 CLI 或自动定时任务执行，不提供 HTTP 触发接口。
 
 #### 获取探测结果
 ```http

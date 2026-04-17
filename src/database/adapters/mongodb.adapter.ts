@@ -84,7 +84,7 @@ export class MongodbAdapter implements DatabaseAdapter {
 
   async listProbeServers(): Promise<DfServer[]> {
     const rows = await this.serverCollection()
-      .find({ alive: { $ne: -1 } }, { projection: { _id: 0 } })
+      .find({ alive: { $gte: 0 } }, { projection: { _id: 0 } })
       .sort({ id: 1 })
       .toArray();
     return rows.map((row) => this.mapServer(row));
@@ -92,7 +92,7 @@ export class MongodbAdapter implements DatabaseAdapter {
 
   async getServer(id: number): Promise<DfServer | null> {
     const row = await this.serverCollection().findOne(
-      { id, alive: { $ne: -1 } },
+      { id, alive: { $gte: 0 } },
       { projection: { _id: 0 } },
     );
     return row ? this.mapServer(row) : null;

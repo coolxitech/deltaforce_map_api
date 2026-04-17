@@ -95,6 +95,7 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
   }
 
   async probeAll(): Promise<ProbeResult[]> {
+    await this.clearProbeCache();
     const servers = await this.database.adapter.listProbeServers();
     return Promise.all(servers.map((server) => this.probeServer(server)));
   }
@@ -160,12 +161,10 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
         version: scan.version,
       });
 
+      const redisKey = `server:${server.id}:probe`;
+      await this.redis.del(redisKey);
+
       if (displayData) {
-        const redisKey = `server:${server.id}:probe`;
-        const allKeys = await this.redis.keys();
-        for (const key of allKeys) {
-          await this.redis.del(key);
-        }
         await this.redis.set(redisKey, displayData, 1800);
       }
 
@@ -174,7 +173,7 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
       const result: ProbeResult = {
         id: server.id,
         address: server.address,
-        alive: -1,
+        alive: 0,
         scanMode: this.safeScanMode(server),
         latencyMs: null,
         statusCode: null,
@@ -186,12 +185,15 @@ export class ProbesService implements OnModuleInit, OnModuleDestroy {
         checkedAt,
       };
 
-      await this.database.adapter.updateServerProbe(server.id, {
-        alive: -1,
-      });
+      await this.redis.del(`server:${server.id}:probe`);
 
       return result;
     }
+  }
+
+  private async clearProbeCache(): Promise<void> {
+    const keys = await this.redis.keys('server:*:probe');
+    await Promise.all(keys.map((key) => this.redis.del(key)));
   }
 
   private httpGet(url: URL): Promise<HttpResponse> {

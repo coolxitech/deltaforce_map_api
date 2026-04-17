@@ -103,14 +103,14 @@ export class PostgresAdapter implements DatabaseAdapter {
 
   async listProbeServers(): Promise<DfServer[]> {
     const result = await this.pool.query<DfServerRow>(
-      'SELECT id, address, alive, version, token FROM df_list WHERE alive <> -1 ORDER BY id ASC',
+      'SELECT id, address, alive, version, token FROM df_list WHERE alive >= 0 ORDER BY id ASC',
     );
     return result.rows.map((row) => this.mapServer(row));
   }
 
   async getServer(id: number): Promise<DfServer | null> {
     const result = await this.pool.query<DfServerRow>(
-      'SELECT id, address, alive, version, token FROM df_list WHERE id = $1 AND alive <> -1 LIMIT 1',
+      'SELECT id, address, alive, version, token FROM df_list WHERE id = $1 AND alive >= 0 LIMIT 1',
       [id],
     );
     const row = result.rows[0];
